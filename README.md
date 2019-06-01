@@ -3,7 +3,7 @@ These are the codes used in the paper titled: "Heterogeneous Gaussian Mechanism:
 
 # Requirement
 The software is written in tensorflow. It requires the following packages:
-python3
-Tensorflow 1.1 or later
+python3,
+Tensorflow 1.1 or later.
 
 If you use this code, please cite our paper.
