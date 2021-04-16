@@ -141,7 +141,7 @@ def train(fgsm_eps, _dp_epsilon, _attack_norm_bound, log_filename, ratio):
     num_steps = 1800000  # 'number of steps T = E * N / L = E / q'
     num_epoch = 24  # 'number of epoches E'
 
-    sigma = 5  # 'sigma'
+    sigma = 4  # 'sigma'
     delta = 1e-5  # 'delta'
 
     lambd = 1e3  # 'exponential distribution parameter'
@@ -260,21 +260,21 @@ def train(fgsm_eps, _dp_epsilon, _attack_norm_bound, log_filename, ratio):
     sensitivity = clip_bound  # adjacency matrix with one more tuple
 
     gw_W1 += tf.random_normal(shape=tf.shape(gw_W1), mean=0.0,
-                              stddev=(sigma * sensitivity)**2, dtype=tf.float32)
+                              stddev=(sigma * sensitivity), dtype=tf.float32) / batch_size
     gb1 += tf.random_normal(shape=tf.shape(gb1), mean=0.0,
-                            stddev=(sigma * sensitivity)**2, dtype=tf.float32)
+                            stddev=(sigma * sensitivity), dtype=tf.float32) / batch_size
     gw_W2 += tf.random_normal(shape=tf.shape(gw_W2), mean=0.0,
-                              stddev=(sigma * sensitivity)**2, dtype=tf.float32)
+                              stddev=(sigma * sensitivity), dtype=tf.float32) / batch_size
     gb2 += tf.random_normal(shape=tf.shape(gb2), mean=0.0,
-                            stddev=(sigma * sensitivity)**2, dtype=tf.float32)
+                            stddev=(sigma * sensitivity), dtype=tf.float32) / batch_size
     gw_Wf1 += tf.random_normal(shape=tf.shape(gw_Wf1), mean=0.0,
-                               stddev=(sigma * sensitivity)**2, dtype=tf.float32)
+                               stddev=(sigma * sensitivity), dtype=tf.float32) / batch_size
     gbf1 += tf.random_normal(shape=tf.shape(gbf1), mean=0.0,
-                             stddev=(sigma * sensitivity)**2, dtype=tf.float32)
+                             stddev=(sigma * sensitivity), dtype=tf.float32) / batch_size
     gw_Wf2 += tf.random_normal(shape=tf.shape(gw_Wf2), mean=0.0,
-                               stddev=(sigma * sensitivity)**2, dtype=tf.float32)
+                               stddev=(sigma * sensitivity), dtype=tf.float32) / batch_size
     gbf2 += tf.random_normal(shape=tf.shape(gbf2), mean=0.0,
-                             stddev=(sigma * sensitivity)**2, dtype=tf.float32)
+                             stddev=(sigma * sensitivity), dtype=tf.float32) / batch_size
 
     train_step = opt.apply_gradients([(gw_W1, W_conv1), (gb1, b_conv1), (gw_W2, W_conv2), (
         gb2, b_conv2), (gw_Wf1, W_fc1), (gbf1, b_fc1), (gw_Wf2, W_fc2), (gbf2, b_fc2)])
@@ -335,7 +335,7 @@ def train(fgsm_eps, _dp_epsilon, _attack_norm_bound, log_filename, ratio):
     s = math.log(sqrt(2.0/math.pi)*1e+5)
     sigmaEGM = sqrt(2.0)*1.0*(sqrt(s) + sqrt(s+dp_epsilon))/(2.0*dp_epsilon)
     print(sigmaEGM)
-    __noiseE = np.random.normal(0.0, sigmaEGM**2, 28*28*32).astype(np.float32)
+    __noiseE = np.random.normal(0.0, sigmaEGM, 28*28*32).astype(np.float32)
     __noiseE = np.reshape(__noiseE, [-1, 28, 28, 32]);
 
     start_time = time.time()
@@ -362,7 +362,7 @@ def train(fgsm_eps, _dp_epsilon, _attack_norm_bound, log_filename, ratio):
     #print(Delta_redis)
     sigmaHGM = sqrt(2.0)*Delta_redis*(sqrt(s) + sqrt(s+dp_epsilon))/(2.0*dp_epsilon)
     #print(sigmaHGM)
-    __noiseH = np.random.normal(0.0, sigmaHGM**2, 28*28*32).astype(np.float32)
+    __noiseH = np.random.normal(0.0, sigmaHGM, 28*28*32).astype(np.float32)
     __noiseH = np.reshape(__noiseH, [-1, 28, 28, 32])*grad_redis;
 
     sess.run(tf.global_variables_initializer())
@@ -404,9 +404,9 @@ def train(fgsm_eps, _dp_epsilon, _attack_norm_bound, log_filename, ratio):
             for n_draws in range(0, 2000):
                 if n_draws % 1000 == 0:
                     print(n_draws)
-                _noiseE = np.random.normal(0.0, sigmaEGM**2, 28*28*32).astype(np.float32)
+                _noiseE = np.random.normal(0.0, sigmaEGM, 28*28*32).astype(np.float32)
                 _noiseE = np.reshape(_noiseE, [-1, 28, 28, 32]);
-                _noise = np.random.normal(0.0, sigmaHGM**2, 28*28*32).astype(np.float32)
+                _noise = np.random.normal(0.0, sigmaHGM, 28*28*32).astype(np.float32)
                 _noise = np.reshape(_noise, [-1, 28, 28, 32])*grad_redis;
                 for j in range(test_size):
                     pred = argmax_predictions[j]
