@@ -54,7 +54,7 @@ epochs = 5000; #number of epochs
 MOVING_AVERAGE_DECAY = 0.9999
 
 clip_bound = 0.01 # 'the clip bound of the gradients'
-sigma = 1.5 # 'sigma'
+sigma_value = 1.5 # 'sigma'
 delta = 1e-5 # 'delta'
 sensitivity = clip_bound #adjacency matrix with one more tuple
 target_eps = [4.0];
@@ -268,6 +268,7 @@ def train(cifar10_data, logfile):
     
     dp_mult = attack_norm_bound * math.sqrt(2 * math.log(1.25 / dp_delta)) / dp_epsilon
     noise = tf.placeholder(tf.float32, [None, 14, 14, 128]);
+    sigma = tf.placeholder(tf.float32);
     x = tf.placeholder(tf.float32, [None,image_size,image_size,3]);
     #y_conv, h_conv1 = inference(x, params, dp_mult**2 * noise);
     y_conv, h_conv1 = inference(x, params, attack_norm_bound * noise);
@@ -320,16 +321,16 @@ def train(cifar10_data, logfile):
     gw_K5 = tf.clip_by_norm(gw_K5,clip_bound)
     
     #perturb
-    gw_K1 += tf.random_normal(shape=tf.shape(gw_K1), mean=0.0, stddev = (sigma * sensitivity)**2, dtype=tf.float32)
-    gw_K2 += tf.random_normal(shape=tf.shape(gw_K2), mean=0.0, stddev = (sigma * sensitivity)**2, dtype=tf.float32)
-    gw_K3 += tf.random_normal(shape=tf.shape(gw_K3), mean=0.0, stddev = (sigma * sensitivity)**2, dtype=tf.float32)
-    gw_K4 += tf.random_normal(shape=tf.shape(gw_K4), mean=0.0, stddev = (sigma * sensitivity)**2, dtype=tf.float32)
-    gw_K5 += tf.random_normal(shape=tf.shape(gw_K5), mean=0.0, stddev = (sigma * sensitivity)**2, dtype=tf.float32)
-    gb1 += tf.random_normal(shape=tf.shape(gb1), mean=0.0, stddev = (sigma * sensitivity)**2, dtype=tf.float32)
-    gb2 += tf.random_normal(shape=tf.shape(gb2), mean=0.0, stddev = (sigma * sensitivity)**2, dtype=tf.float32)
-    gb3 += tf.random_normal(shape=tf.shape(gb3), mean=0.0, stddev = (sigma * sensitivity)**2, dtype=tf.float32)
-    gb4 += tf.random_normal(shape=tf.shape(gb4), mean=0.0, stddev = (sigma * sensitivity)**2, dtype=tf.float32)
-    gb5 += tf.random_normal(shape=tf.shape(gb5), mean=0.0, stddev = (sigma * sensitivity)**2, dtype=tf.float32)
+    gw_K1 += tf.random_normal(shape=tf.shape(gw_K1), mean=0.0, stddev = (sigma * sensitivity), dtype=tf.float32) / batch_size
+    gw_K2 += tf.random_normal(shape=tf.shape(gw_K2), mean=0.0, stddev = (sigma * sensitivity), dtype=tf.float32) / batch_size
+    gw_K3 += tf.random_normal(shape=tf.shape(gw_K3), mean=0.0, stddev = (sigma * sensitivity), dtype=tf.float32) / batch_size
+    gw_K4 += tf.random_normal(shape=tf.shape(gw_K4), mean=0.0, stddev = (sigma * sensitivity), dtype=tf.float32) / batch_size
+    gw_K5 += tf.random_normal(shape=tf.shape(gw_K5), mean=0.0, stddev = (sigma * sensitivity), dtype=tf.float32) / batch_size
+    gb1 += tf.random_normal(shape=tf.shape(gb1), mean=0.0, stddev = (sigma * sensitivity), dtype=tf.float32) / batch_size
+    gb2 += tf.random_normal(shape=tf.shape(gb2), mean=0.0, stddev = (sigma * sensitivity), dtype=tf.float32) / batch_size
+    gb3 += tf.random_normal(shape=tf.shape(gb3), mean=0.0, stddev = (sigma * sensitivity), dtype=tf.float32) / batch_size
+    gb4 += tf.random_normal(shape=tf.shape(gb4), mean=0.0, stddev = (sigma * sensitivity), dtype=tf.float32) / batch_size
+    gb5 += tf.random_normal(shape=tf.shape(gb5), mean=0.0, stddev = (sigma * sensitivity), dtype=tf.float32) / batch_size
     
     # apply gradients and keep tracking moving average of the parameters
     apply_gradient_op = opt.apply_gradients([(gw_K1,kernel1),(gb1,biases1),(gw_K2,kernel2),(gb2,biases2),(gw_K3,kernel3),(gb3,biases3),(gw_K4,kernel4),(gb4,biases4),(gw_K5,kernel5),(gb5,biases5)], global_step=global_step);
@@ -426,12 +427,12 @@ def train(cifar10_data, logfile):
     s = math.log(sqrt(2.0/math.pi)*1e+5)
     sigmaEGM = sqrt(2.0)*1.0*(sqrt(s) + sqrt(s+dp_epsilon))/(2.0*dp_epsilon)
     #print(sigmaEGM)
-    __noiseE = np.random.normal(0.0, sigmaEGM**2, 14*14*128).astype(np.float32)
+    __noiseE = np.random.normal(0.0, sigmaEGM, 14*14*128).astype(np.float32)
     __noiseE = np.reshape(__noiseE, [-1, 14, 14, 128]);
     print("Compute The Noise Redistribution Vector")
     for step in xrange(_global_step, 100*step_for_epoch):
         batch = cifar10_data.train.next_batch(batch_size); #Get a random batch.
-        _, loss_value = sess.run([train_op, loss], feed_dict = {x: batch[0], y_: batch[1], noise: __noiseE*0})
+        _, loss_value = sess.run([train_op, loss], feed_dict = {x: batch[0], y_: batch[1], noise: __noiseE*0, sigma: sigma_value*0})
         if step % (5*step_for_epoch) == 0:
             print(loss_value)
     batch = cifar10_data.train.next_batch(40*batch_size);
@@ -445,7 +446,7 @@ def train(cifar10_data, logfile):
     #print(Delta_redis)
     sigmaHGM = sqrt(2.0)*Delta_redis*(sqrt(s) + sqrt(s+dp_epsilon))/(2.0*dp_epsilon)
     #print(sigmaHGM)
-    __noiseH = np.random.normal(0.0, sigmaHGM**2, 14*14*128).astype(np.float32)
+    __noiseH = np.random.normal(0.0, sigmaHGM, 14*14*128).astype(np.float32)
     __noiseH = np.reshape(__noiseH, [-1, 14, 14, 128])*grad_redis;
     
     sess.run(init)
@@ -454,7 +455,7 @@ def train(cifar10_data, logfile):
       start_time = time.time()
       batch = cifar10_data.train.next_batch(batch_size); #Get a random batch.
       #grad_redis = sess.run([normalized_grad_r], feed_dict = {x: batch[0], y_: batch[1], noise: (__noise + grad_redis)/2})
-      _, loss_value = sess.run([train_op, loss], feed_dict = {x: batch[0], y_: batch[1], noise: (__noiseE + __noiseH)/2})
+      _, loss_value = sess.run([train_op, loss], feed_dict = {x: batch[0], y_: batch[1], noise: (__noiseE + __noiseH)/2, sigma: sigma_value})
       duration = time.time() - start_time
 
       assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
@@ -462,6 +463,7 @@ def train(cifar10_data, logfile):
       sess.run([privacy_accum_op])
       spent_eps_deltas = priv_accountant.get_privacy_spent(sess, target_eps=target_eps)
       if step % (5*step_for_epoch) == 0:
+        print(loss_value)
         print(spent_eps_deltas)
       _break = False;
       for _eps, _delta in spent_eps_deltas:
@@ -490,9 +492,9 @@ def train(cifar10_data, logfile):
             softmax_predictions = sess.run(softmax_y_conv, feed_dict={x: adv_images_dict, noise: (__noiseE + __noiseH)/2})
             argmax_predictions = np.argmax(softmax_predictions, axis=1)
             for n_draws in range(0, 1000):
-                _noiseE = np.random.normal(0.0, sigmaEGM**2, 14*14*128).astype(np.float32)
+                _noiseE = np.random.normal(0.0, sigmaEGM, 14*14*128).astype(np.float32)
                 _noiseE = np.reshape(_noiseE, [-1, 14, 14, 128]);
-                _noise = np.random.normal(0.0, sigmaHGM**2, 14*14*128).astype(np.float32)
+                _noise = np.random.normal(0.0, sigmaHGM, 14*14*128).astype(np.float32)
                 _noise = np.reshape(_noise, [-1, 14, 14, 128])*grad_redis;
                 for j in range(test_bach_size):
                     pred = argmax_predictions[j]
